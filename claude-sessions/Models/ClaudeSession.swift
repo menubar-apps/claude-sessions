@@ -33,6 +33,10 @@ struct ClaudeSession: Identifiable, Codable {
     var displayName: String {
         return cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~")
     }
+
+    var folderName: String {
+        return (cwd as NSString).lastPathComponent
+    }
 }
 
 struct ModelInfo: Codable {

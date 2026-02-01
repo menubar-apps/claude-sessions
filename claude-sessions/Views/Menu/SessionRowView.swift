@@ -17,18 +17,17 @@ struct SessionRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Text(session.status.emoji)
                         .accessibilityLabel(statusAccessibilityLabel)
-                    
-                    Text(session.displayName)
+
+                    Text(session.folderName)
                         .font(.headline)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .help(session.cwd)
                 }
                 .layoutPriority(1)
-                
+
                 Spacer(minLength: 0)
 
                 Menu {
@@ -50,6 +49,18 @@ struct SessionRowView: View {
 
                     Divider()
 
+                    Button("Resume Session") {
+                        sessionManager.resumeInTerminal(session)
+                    }
+                    .keyboardShortcut("r", modifiers: [.command])
+
+                    Button("Copy Resume Command") {
+                        sessionManager.copyResumeCommand(session)
+                    }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+
+                    Divider()
+
                     Button("Remove from View", role: .destructive) {
                         sessionManager.removeSession(session)
                     }
@@ -65,6 +76,18 @@ struct SessionRowView: View {
                 .accessibilityLabel("Session actions")
                 .opacity(isHovered ? 1.0 : 0.5)
             }
+
+            HStack(spacing: 4) {
+                Image(systemName: "folder")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Text(session.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .help(session.cwd)
 
             HStack(spacing: 8) {
                 Text(session.model.displayName)
@@ -91,9 +114,15 @@ struct SessionRowView: View {
             .accessibilityLabel("Context usage: \(Int(session.contextWindow.usedPercentage)) percent")
             .accessibilityValue(contextAccessibilityValue)
 
-            Text("Duration: \(FormatHelpers.formatDuration(session.duration))")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            HStack {
+                Text("Duration: \(FormatHelpers.formatDuration(session.duration))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(FormatHelpers.formatRelativeTime(session.lastUpdateTime))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(12)
         .background(
@@ -107,7 +136,7 @@ struct SessionRowView: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Session: \(session.displayName)")
+        .accessibilityLabel("Session: \(session.folderName) at \(session.displayName)")
     }
 
     private func contextColor(for percentage: Double) -> Color {

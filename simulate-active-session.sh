@@ -1,7 +1,10 @@
 #!/bin/bash
 # Simulates an active Claude session by updating the timestamp every 2 seconds
 
-SESSION_FILE="/tmp/claude-status--Users-caseyjones-homedev-claude-sessions.json"
+# Create session directory if it doesn't exist
+mkdir -p "$HOME/.claude_sessions"
+
+SESSION_FILE="$HOME/.claude_sessions/claude-status--Users-caseyjones-homedev-claude-sessions.json"
 
 echo "Simulating active Claude session..."
 echo "Press Ctrl+C to stop"

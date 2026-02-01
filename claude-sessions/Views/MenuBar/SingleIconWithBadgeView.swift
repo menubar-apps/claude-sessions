@@ -26,15 +26,15 @@ struct SingleIconWithBadgeView: View {
         HStack(spacing: 4) {
             if sessions.isEmpty {
                 Image(systemName: "circle.dotted")
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                     .foregroundColor(.gray)
             } else {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 10, height: 10)
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(statusColor)
 
                 Text("\(sessions.count)")
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
             }
         }
         .accessibilityElement(children: .combine)

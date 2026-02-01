@@ -12,17 +12,17 @@ struct MultipleCirclesView: View {
     let maxCircles = 4
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             if sessions.isEmpty {
                 Image(systemName: "circle.dotted")
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                     .foregroundColor(.gray)
                     .accessibilityLabel("No active sessions")
             } else {
                 ForEach(Array(sessions.prefix(maxCircles).enumerated()), id: \.offset) { index, session in
-                    Circle()
-                        .fill(session.status.color)
-                        .frame(width: 8, height: 8)
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(session.status.color)
                         .accessibilityLabel("\(session.status.emoji) session")
                 }
             }

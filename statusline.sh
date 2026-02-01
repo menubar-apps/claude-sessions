@@ -1,7 +1,7 @@
 #!/bin/bash
 # Claude Code Statusline Script
 # This script is called by Claude Code to generate statusline data
-# It writes session information to /tmp for the menubar app to read
+# It writes session information to ~/.claude_sessions for the menubar app to read
 
 # Read the JSON data from stdin
 json_data=$(cat)
@@ -14,10 +14,14 @@ cwd=$(echo "$json_data" | jq -r '.cwd // "unknown"')
 timestamp=$(date +%s)000
 json_with_timestamp=$(echo "$json_data" | jq ". + {\"_statusline_update_time\": $timestamp}")
 
-# Write to temp file for the menubar app to read
+# Create session directory if it doesn't exist
+session_dir="$HOME/.claude_sessions"
+mkdir -p "$session_dir"
+
+# Write to session file for the menubar app to read
 # Sanitize the cwd for filename (replace / with -)
 safe_cwd=$(echo "$cwd" | tr '/' '-')
-temp_file="/tmp/claude-status-${safe_cwd}.json"
+temp_file="$session_dir/claude-status-${safe_cwd}.json"
 echo "$json_with_timestamp" > "$temp_file"
 
 # Output empty string (no statusline display in terminal)

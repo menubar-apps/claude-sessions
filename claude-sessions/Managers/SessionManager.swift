@@ -13,10 +13,21 @@ class SessionManager: ObservableObject {
 
     private var fileMonitor: DispatchSourceFileSystemObject?
     private var refreshTimer: Timer?
-    private let tmpDirectory = "/tmp"
+    private let sessionDirectory: String
     private let statusFilePrefix = "claude-status"
 
     init() {
+        // Expand ~/.claude_sessions to full path
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser.path
+        self.sessionDirectory = "\(homeDirectory)/.claude_sessions"
+
+        // Create directory if it doesn't exist
+        try? FileManager.default.createDirectory(
+            atPath: sessionDirectory,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+
         startMonitoring()
     }
 
@@ -47,13 +58,13 @@ class SessionManager: ObservableObject {
         let fileManager = FileManager.default
 
         do {
-            let tmpContents = try fileManager.contentsOfDirectory(atPath: tmpDirectory)
-            let statusFiles = tmpContents.filter { $0.hasPrefix(statusFilePrefix) && $0.hasSuffix(".json") }
+            let sessionContents = try fileManager.contentsOfDirectory(atPath: sessionDirectory)
+            let statusFiles = sessionContents.filter { $0.hasPrefix(statusFilePrefix) && $0.hasSuffix(".json") }
 
             var loadedSessions: [ClaudeSession] = []
 
             for filename in statusFiles {
-                let filePath = "\(tmpDirectory)/\(filename)"
+                let filePath = "\(sessionDirectory)/\(filename)"
 
                 if let session = loadSession(from: filePath) {
                     loadedSessions.append(session)
@@ -72,7 +83,7 @@ class SessionManager: ObservableObject {
             }
 
         } catch {
-            print("Error reading /tmp directory: \(error)")
+            print("Error reading ~/.claude_sessions directory: \(error)")
         }
     }
 
@@ -88,6 +99,16 @@ class SessionManager: ObservableObject {
     }
 
     private func convertToSession(_ data: StatuslineData) -> ClaudeSession {
+        // Calculate used percentage if not provided
+        let usedPercentage: Double
+        if let percentage = data.contextWindow.usedPercentage {
+            usedPercentage = Double(percentage)
+        } else {
+            let totalTokens = data.contextWindow.totalInputTokens + data.contextWindow.totalOutputTokens
+            let maxTokens = data.contextWindow.contextWindowSize
+            usedPercentage = maxTokens > 0 ? (Double(totalTokens) / Double(maxTokens)) * 100.0 : 0.0
+        }
+
         return ClaudeSession(
             id: data.sessionId,
             cwd: data.cwd,
@@ -97,33 +118,33 @@ class SessionManager: ObservableObject {
                 id: data.model.id
             ),
             contextWindow: ContextWindow(
-                usedPercentage: data.contextWindow.usedPercentage,
-                maxTokens: data.contextWindow.maxTokens
+                usedPercentage: usedPercentage,
+                maxTokens: data.contextWindow.contextWindowSize
             ),
             tokenUsage: TokenUsage(
-                input: data.tokenUsage.input,
-                output: data.tokenUsage.output
+                input: data.contextWindow.totalInputTokens,
+                output: data.contextWindow.totalOutputTokens
             ),
             cost: Cost(
-                total: data.cost.total,
-                input: data.cost.input,
-                output: data.cost.output
+                total: data.cost.totalCostUsd,
+                input: 0.0,  // Not available in new format
+                output: 0.0  // Not available in new format
             ),
-            duration: data.duration.totalSeconds,
-            codeImpact: data.codeImpact.map { CodeImpact(
-                linesAdded: $0.linesAdded,
-                linesRemoved: $0.linesRemoved
-            )},
+            duration: Double(data.cost.totalDurationMs) / 1000.0,  // Convert ms to seconds
+            codeImpact: CodeImpact(
+                linesAdded: data.cost.totalLinesAdded,
+                linesRemoved: data.cost.totalLinesRemoved
+            ),
             lastUpdateTime: Date(timeIntervalSince1970: TimeInterval(data.statuslineUpdateTime) / 1000.0)
         )
     }
 
     private func setupFileSystemMonitoring() {
-        let tmpURL = URL(fileURLWithPath: tmpDirectory)
-        let descriptor = open(tmpDirectory, O_EVTONLY)
+        let sessionURL = URL(fileURLWithPath: sessionDirectory)
+        let descriptor = open(sessionDirectory, O_EVTONLY)
 
         guard descriptor >= 0 else {
-            print("Failed to open /tmp for monitoring")
+            print("Failed to open ~/.claude_sessions for monitoring")
             return
         }
 
@@ -146,7 +167,7 @@ class SessionManager: ObservableObject {
 
     func removeSession(_ session: ClaudeSession) {
         let filename = "claude-status-\(session.cwd.replacingOccurrences(of: "/", with: "-")).json"
-        let filePath = "\(tmpDirectory)/\(filename)"
+        let filePath = "\(sessionDirectory)/\(filename)"
 
         do {
             try FileManager.default.removeItem(atPath: filePath)
@@ -176,5 +197,30 @@ class SessionManager: ObservableObject {
 
     func openInFinder(_ session: ClaudeSession) {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: session.cwd)
+    }
+
+    func resumeInTerminal(_ session: ClaudeSession) {
+        let command = "cd '\(session.cwd)' && claude -r \(session.sessionId)"
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "\(command)"
+        end tell
+        """
+
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            appleScript.executeAndReturnError(&error)
+
+            if let error = error {
+                print("AppleScript error: \(error)")
+            }
+        }
+    }
+
+    func copyResumeCommand(_ session: ClaudeSession) {
+        let command = "cd '\(session.cwd)' && claude -r \(session.sessionId)"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
     }
 }

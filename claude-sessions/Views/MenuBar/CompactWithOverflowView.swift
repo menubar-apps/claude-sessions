@@ -12,22 +12,22 @@ struct CompactWithOverflowView: View {
     let maxCircles = 3
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             if sessions.isEmpty {
                 Image(systemName: "circle.dotted")
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                     .foregroundColor(.gray)
             } else {
                 ForEach(Array(sessions.prefix(maxCircles).enumerated()), id: \.offset) { index, session in
-                    Circle()
-                        .fill(session.status.color)
-                        .frame(width: 8, height: 8)
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(session.status.color)
                         .accessibilityLabel("\(session.status.emoji) session")
                 }
 
                 if sessions.count > maxCircles {
                     Text("+\(sessions.count - maxCircles)")
-                        .font(.system(size: 10))
+                        .font(.system(size: 11, weight: .medium))
                         .accessibilityLabel("Plus \(sessions.count - maxCircles) more sessions")
                 }
             }
