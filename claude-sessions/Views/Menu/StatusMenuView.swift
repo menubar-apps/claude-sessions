@@ -118,25 +118,29 @@ struct StatusMenuView: View {
 
             Divider()
 
-            HStack(alignment: .top, spacing: 12) {
-                SummaryView(sessions: filteredSessions)
-
-                Button(action: {
-                    NSApplication.shared.terminate(nil)
-                }) {
-                    Image(systemName: "power")
-                        .font(.system(size: 14))
+            SummaryView(sessions: filteredSessions)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            
+            Divider()
+            
+            Button(action: {
+                NSApplication.shared.terminate(nil)
+            }) {
+                HStack {
+                    Text("Quit Claude Sessions")
+                    Spacer()
+                    Text("⌘Q")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .frame(width: 28, height: 28)
-                .contentShape(Rectangle())
-                .keyboardShortcut("q", modifiers: [.command])
-                .accessibilityLabel("Quit application")
-                .help("Quit")
             }
+            .buttonStyle(.plain)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .contentShape(Rectangle())
+            .keyboardShortcut("q", modifiers: [.command])
+            .accessibilityLabel("Quit application")
         }
         .frame(width: 400)
     }

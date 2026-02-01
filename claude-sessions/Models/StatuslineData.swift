@@ -9,16 +9,20 @@ import Foundation
 
 struct StatuslineData: Codable {
     let sessionId: String
+    let transcriptPath: String?
     let cwd: String
     let model: ModelData
+    let workspace: WorkspaceData?
     let contextWindow: ContextWindowData
     let cost: CostData
     let statuslineUpdateTime: Int64
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
+        case transcriptPath = "transcript_path"
         case cwd
         case model
+        case workspace
         case contextWindow = "context_window"
         case cost
         case statuslineUpdateTime = "_statusline_update_time"
@@ -31,6 +35,14 @@ struct StatuslineData: Codable {
         enum CodingKeys: String, CodingKey {
             case displayName = "display_name"
             case id
+        }
+    }
+
+    struct WorkspaceData: Codable {
+        let projectDir: String
+
+        enum CodingKeys: String, CodingKey {
+            case projectDir = "project_dir"
         }
     }
 

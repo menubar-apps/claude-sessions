@@ -13,6 +13,7 @@ struct SessionRowView: View {
     let sessionManager: SessionManager
 
     @State private var isHovered = false
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -21,7 +22,7 @@ struct SessionRowView: View {
                     Text(session.status.emoji)
                         .accessibilityLabel(statusAccessibilityLabel)
 
-                    Text(session.folderName)
+                    Text(session.displayName)
                         .font(.headline)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -81,7 +82,7 @@ struct SessionRowView: View {
                 Image(systemName: "folder")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                Text(session.displayName)
+                Text(session.cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -127,16 +128,52 @@ struct SessionRowView: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isHovered ? Color(nsColor: .controlBackgroundColor) : Color.clear)
+                .fill(isHovered || isFocused ? Color(nsColor: .controlBackgroundColor) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isFocused ? Color.accentColor : Color.clear, lineWidth: 2)
         )
         .contentShape(RoundedRectangle(cornerRadius: 8))
+        .focusable()
+        .focused($isFocused)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
             }
         }
+        .contextMenu {
+            Button("Resume Session") {
+                sessionManager.resumeInTerminal(session)
+            }
+            
+            Button("Copy Resume Command") {
+                sessionManager.copyResumeCommand(session)
+            }
+            
+            Divider()
+            
+            Button("Copy Path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(session.cwd, forType: .string)
+            }
+
+            Button("Open in Terminal") {
+                sessionManager.openInTerminal(session)
+            }
+
+            Button("Open in Finder") {
+                sessionManager.openInFinder(session)
+            }
+
+            Divider()
+
+            Button("Remove from View", role: .destructive) {
+                sessionManager.removeSession(session)
+            }
+        }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Session: \(session.folderName) at \(session.displayName)")
+        .accessibilityLabel("Session: \(session.displayName) at \(session.cwd)")
     }
 
     private func contextColor(for percentage: Double) -> Color {

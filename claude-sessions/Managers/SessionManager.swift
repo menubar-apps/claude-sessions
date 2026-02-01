@@ -7,6 +7,18 @@
 
 import Foundation
 import AppKit
+import Combine
+
+// SessionsIndex represents the structure of sessions-index.json in Claude project directories
+struct SessionsIndex: Codable {
+    let entries: [SessionEntry]
+    
+    struct SessionEntry: Codable {
+        let sessionId: String
+        let customTitle: String?
+        let summary: String?
+    }
+}
 
 class SessionManager: ObservableObject {
     @Published var sessions: [ClaudeSession] = []
@@ -15,8 +27,18 @@ class SessionManager: ObservableObject {
     private var refreshTimer: Timer?
     private let sessionDirectory: String
     private let statusFilePrefix = "claude-status"
+    private let preferencesManager: PreferencesManager
+    private var cancellables = Set<AnyCancellable>()
+    
+    // Cache for session index files to avoid redundant reads
+    private var sessionIndexCache: [String: SessionsIndex] = [:]
+    
+    // Background queue for file I/O operations
+    private let backgroundQueue = DispatchQueue(label: "com.claude-sessions.fileio", qos: .utility)
 
-    init() {
+    init(preferencesManager: PreferencesManager = .shared) {
+        self.preferencesManager = preferencesManager
+        
         // Expand ~/.claude_sessions to full path
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser.path
         self.sessionDirectory = "\(homeDirectory)/.claude_sessions"
@@ -28,33 +50,61 @@ class SessionManager: ObservableObject {
             attributes: nil
         )
 
+        setupPreferenceObservers()
         startMonitoring()
     }
 
     deinit {
         stopMonitoring()
     }
+    
+    private func setupPreferenceObservers() {
+        // Observe refresh interval changes and restart timer
+        preferencesManager.$refreshInterval
+            .dropFirst() // Skip initial value
+            .removeDuplicates()
+            .sink { [weak self] newInterval in
+                self?.restartTimer(with: newInterval)
+            }
+            .store(in: &cancellables)
+    }
 
     func startMonitoring() {
-        refreshSessions()
+        // Initial refresh on background queue
+        backgroundQueue.async { [weak self] in
+            self?.refreshSessions()
+        }
 
-        let interval = PreferencesManager.shared.refreshInterval
+        restartTimer(with: preferencesManager.refreshInterval)
+        setupFileSystemMonitoring()
+    }
+    
+    private func restartTimer(with interval: TimeInterval) {
+        refreshTimer?.invalidate()
+        
+        // Timer fires on main thread, but work is dispatched to background
         refreshTimer = Timer.scheduledTimer(
             withTimeInterval: interval,
             repeats: true
         ) { [weak self] _ in
-            self?.refreshSessions()
+            self?.backgroundQueue.async {
+                self?.refreshSessions()
+            }
         }
-
-        setupFileSystemMonitoring()
     }
 
     func stopMonitoring() {
         refreshTimer?.invalidate()
+        refreshTimer = nil
         fileMonitor?.cancel()
+        fileMonitor = nil
+        cancellables.removeAll()
     }
 
     func refreshSessions() {
+        // Clear the session index cache on each refresh
+        sessionIndexCache.removeAll()
+        
         let fileManager = FileManager.default
 
         do {
@@ -78,6 +128,7 @@ class SessionManager: ObservableObject {
                 return s1.lastUpdateTime > s2.lastUpdateTime
             }
 
+            // Always dispatch to main thread for UI updates
             DispatchQueue.main.async {
                 self.sessions = loadedSessions
             }
@@ -98,6 +149,52 @@ class SessionManager: ObservableObject {
         }
     }
 
+    // getSessionName looks up the session name from sessions-index.json with caching
+    private func getSessionName(transcriptPath: String?, sessionId: String) -> String {
+        // If transcript path is empty, can't look up the name
+        guard let transcriptPath = transcriptPath, !transcriptPath.isEmpty else {
+            return ""
+        }
+        
+        // Get the project directory (parent of transcript file)
+        let projectDir = (transcriptPath as NSString).deletingLastPathComponent
+        
+        // Check cache first
+        if let cachedIndex = sessionIndexCache[projectDir] {
+            return findSessionName(in: cachedIndex, sessionId: sessionId)
+        }
+        
+        let indexPath = (projectDir as NSString).appendingPathComponent("sessions-index.json")
+        
+        // Read and cache sessions-index.json
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: indexPath)),
+              let index = try? JSONDecoder().decode(SessionsIndex.self, from: data) else {
+            // Silently fail - file might not exist or be readable
+            return ""
+        }
+        
+        // Cache the index for this project directory
+        sessionIndexCache[projectDir] = index
+        
+        return findSessionName(in: index, sessionId: sessionId)
+    }
+    
+    private func findSessionName(in index: SessionsIndex, sessionId: String) -> String {
+        // Find matching session entry
+        for entry in index.entries {
+            if entry.sessionId == sessionId {
+                // Prefer customTitle (set via /rename) over summary (auto-generated)
+                if let customTitle = entry.customTitle, !customTitle.isEmpty {
+                    return customTitle
+                }
+                return entry.summary ?? ""
+            }
+        }
+        
+        // Session not found in index
+        return ""
+    }
+    
     private func convertToSession(_ data: StatuslineData) -> ClaudeSession {
         // Calculate used percentage if not provided
         let usedPercentage: Double
@@ -109,10 +206,23 @@ class SessionManager: ObservableObject {
             usedPercentage = maxTokens > 0 ? (Double(totalTokens) / Double(maxTokens)) * 100.0 : 0.0
         }
 
+        // Determine project directory
+        let projectDir = data.workspace?.projectDir ?? data.cwd
+        
+        // Determine project name from project directory
+        let projectName = (projectDir as NSString).lastPathComponent.isEmpty ? 
+            projectDir : (projectDir as NSString).lastPathComponent
+        
+        // Get session name from sessions-index.json
+        let sessionName = getSessionName(transcriptPath: data.transcriptPath, sessionId: data.sessionId)
+
         return ClaudeSession(
             id: data.sessionId,
             cwd: data.cwd,
             sessionId: data.sessionId,
+            sessionName: sessionName,
+            projectDir: projectDir,
+            projectName: projectName,
             model: ModelInfo(
                 displayName: data.model.displayName,
                 id: data.model.id
@@ -140,7 +250,6 @@ class SessionManager: ObservableObject {
     }
 
     private func setupFileSystemMonitoring() {
-        let sessionURL = URL(fileURLWithPath: sessionDirectory)
         let descriptor = open(sessionDirectory, O_EVTONLY)
 
         guard descriptor >= 0 else {
@@ -151,7 +260,7 @@ class SessionManager: ObservableObject {
         fileMonitor = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor,
             eventMask: [.write, .delete, .rename],
-            queue: DispatchQueue.global(qos: .background)
+            queue: backgroundQueue  // Use our background queue
         )
 
         fileMonitor?.setEventHandler { [weak self] in
@@ -166,14 +275,18 @@ class SessionManager: ObservableObject {
     }
 
     func removeSession(_ session: ClaudeSession) {
-        let filename = "claude-status-\(session.cwd.replacingOccurrences(of: "/", with: "-")).json"
-        let filePath = "\(sessionDirectory)/\(filename)"
+        backgroundQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            let filename = "claude-status-\(session.cwd.replacingOccurrences(of: "/", with: "-")).json"
+            let filePath = "\(self.sessionDirectory)/\(filename)"
 
-        do {
-            try FileManager.default.removeItem(atPath: filePath)
-            refreshSessions()
-        } catch {
-            print("Error removing session file: \(error)")
+            do {
+                try FileManager.default.removeItem(atPath: filePath)
+                self.refreshSessions()
+            } catch {
+                print("Error removing session file: \(error)")
+            }
         }
     }
 
@@ -185,17 +298,11 @@ class SessionManager: ObservableObject {
         end tell
         """
 
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
-
-            if let error = error {
-                print("AppleScript error: \(error)")
-            }
-        }
+        executeAppleScriptAsync(script)
     }
 
     func openInFinder(_ session: ClaudeSession) {
+        // NSWorkspace is main-thread safe and fast
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: session.cwd)
     }
 
@@ -208,7 +315,24 @@ class SessionManager: ObservableObject {
         end tell
         """
 
-        if let appleScript = NSAppleScript(source: script) {
+        executeAppleScriptAsync(script)
+    }
+
+    func copyResumeCommand(_ session: ClaudeSession) {
+        let command = "cd '\(session.cwd)' && claude -r \(session.sessionId)"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+    }
+    
+    // MARK: - Private Helpers
+    
+    private func executeAppleScriptAsync(_ source: String) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let appleScript = NSAppleScript(source: source) else {
+                print("Failed to create AppleScript")
+                return
+            }
+            
             var error: NSDictionary?
             appleScript.executeAndReturnError(&error)
 
@@ -216,11 +340,5 @@ class SessionManager: ObservableObject {
                 print("AppleScript error: \(error)")
             }
         }
-    }
-
-    func copyResumeCommand(_ session: ClaudeSession) {
-        let command = "cd '\(session.cwd)' && claude -r \(session.sessionId)"
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(command, forType: .string)
     }
 }

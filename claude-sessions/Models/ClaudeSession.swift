@@ -11,6 +11,9 @@ struct ClaudeSession: Identifiable, Codable {
     let id: String
     let cwd: String
     let sessionId: String
+    let sessionName: String
+    let projectDir: String
+    let projectName: String
     let model: ModelInfo
     let contextWindow: ContextWindow
     let tokenUsage: TokenUsage
@@ -31,11 +34,15 @@ struct ClaudeSession: Identifiable, Codable {
     }
 
     var displayName: String {
-        return cwd.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+        // Prefer sessionName (from sessions-index.json) over folder name
+        if !sessionName.isEmpty {
+            return sessionName
+        }
+        return folderName
     }
 
     var folderName: String {
-        return (cwd as NSString).lastPathComponent
+        return projectName
     }
 }
 
