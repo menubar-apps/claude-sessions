@@ -78,6 +78,22 @@ struct SessionRowView: View {
                 .opacity(isHovered ? 1.0 : 0.5)
             }
 
+            // First prompt message (if available)
+            if !session.firstPrompt.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "text.bubble")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    Text(session.firstPrompt)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .italic()
+                }
+            }
+            
+            // Folder path
             HStack(spacing: 4) {
                 Image(systemName: "folder")
                     .font(.system(size: 11))
@@ -90,30 +106,26 @@ struct SessionRowView: View {
             }
             .help(session.cwd)
 
-            HStack(spacing: 8) {
+            // Model, tokens, cost, and context (all in one row)
+            HStack(spacing: 6) {
                 Text(session.model.displayName)
                 Text("•")
                 Text("\(FormatHelpers.formatNumber(session.tokenUsage.total)) tokens")
+                    .help("Input: \(FormatHelpers.formatNumber(session.tokenUsage.input)) / Output: \(FormatHelpers.formatNumber(session.tokenUsage.output))")
                 Text("•")
                 Text(FormatHelpers.formatCurrency(session.cost.total))
+                Text("•")
+                Text("\(Int(session.contextWindow.usedPercentage))%")
+                    .foregroundStyle(contextColor(for: session.contextWindow.usedPercentage))
+                ProgressView(value: session.contextWindow.usedPercentage, total: 100)
+                    .progressViewStyle(.linear)
+                    .tint(contextColor(for: session.contextWindow.usedPercentage))
+                    .frame(width: 50)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(metadataAccessibilityLabel)
-
-            HStack(spacing: 6) {
-                Text("Context: \(Int(session.contextWindow.usedPercentage))%")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                ProgressView(value: session.contextWindow.usedPercentage, total: 100)
-                    .progressViewStyle(.linear)
-                    .tint(contextColor(for: session.contextWindow.usedPercentage))
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Context usage: \(Int(session.contextWindow.usedPercentage)) percent")
-            .accessibilityValue(contextAccessibilityValue)
 
             HStack {
                 Text("Duration: \(FormatHelpers.formatDuration(session.duration))")
@@ -195,17 +207,6 @@ struct SessionRowView: View {
     }
     
     private var metadataAccessibilityLabel: String {
-        "Model \(session.model.displayName), \(FormatHelpers.formatNumber(session.tokenUsage.total)) tokens, cost \(FormatHelpers.formatCurrency(session.cost.total))"
-    }
-    
-    private var contextAccessibilityValue: String {
-        let percentage = Int(session.contextWindow.usedPercentage)
-        if percentage > 80 {
-            return "High usage, \(percentage) percent"
-        } else if percentage > 50 {
-            return "Moderate usage, \(percentage) percent"
-        } else {
-            return "Low usage, \(percentage) percent"
-        }
+        "Model \(session.model.displayName), \(FormatHelpers.formatNumber(session.tokenUsage.total)) tokens, cost \(FormatHelpers.formatCurrency(session.cost.total)), context \(Int(session.contextWindow.usedPercentage)) percent"
     }
 }

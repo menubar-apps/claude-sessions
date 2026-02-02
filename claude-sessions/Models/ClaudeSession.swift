@@ -12,6 +12,7 @@ struct ClaudeSession: Identifiable, Codable {
     let cwd: String
     let sessionId: String
     let sessionName: String
+    let firstPrompt: String
     let projectDir: String
     let projectName: String
     let model: ModelInfo

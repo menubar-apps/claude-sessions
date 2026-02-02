@@ -17,7 +17,14 @@ struct SessionsIndex: Codable {
         let sessionId: String
         let customTitle: String?
         let summary: String?
+        let firstPrompt: String?
     }
+}
+
+// Holds session metadata extracted from sessions-index.json
+struct SessionIndexInfo {
+    let name: String
+    let firstPrompt: String
 }
 
 class SessionManager: ObservableObject {
@@ -149,11 +156,11 @@ class SessionManager: ObservableObject {
         }
     }
 
-    // getSessionName looks up the session name from sessions-index.json with caching
-    private func getSessionName(transcriptPath: String?, sessionId: String) -> String {
-        // If transcript path is empty, can't look up the name
+    // getSessionInfo looks up session metadata from sessions-index.json with caching
+    private func getSessionInfo(transcriptPath: String?, sessionId: String) -> SessionIndexInfo {
+        // If transcript path is empty, can't look up the info
         guard let transcriptPath = transcriptPath, !transcriptPath.isEmpty else {
-            return ""
+            return SessionIndexInfo(name: "", firstPrompt: "")
         }
         
         // Get the project directory (parent of transcript file)
@@ -161,7 +168,7 @@ class SessionManager: ObservableObject {
         
         // Check cache first
         if let cachedIndex = sessionIndexCache[projectDir] {
-            return findSessionName(in: cachedIndex, sessionId: sessionId)
+            return findSessionInfo(in: cachedIndex, sessionId: sessionId)
         }
         
         let indexPath = (projectDir as NSString).appendingPathComponent("sessions-index.json")
@@ -170,29 +177,34 @@ class SessionManager: ObservableObject {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: indexPath)),
               let index = try? JSONDecoder().decode(SessionsIndex.self, from: data) else {
             // Silently fail - file might not exist or be readable
-            return ""
+            return SessionIndexInfo(name: "", firstPrompt: "")
         }
         
         // Cache the index for this project directory
         sessionIndexCache[projectDir] = index
         
-        return findSessionName(in: index, sessionId: sessionId)
+        return findSessionInfo(in: index, sessionId: sessionId)
     }
     
-    private func findSessionName(in index: SessionsIndex, sessionId: String) -> String {
+    private func findSessionInfo(in index: SessionsIndex, sessionId: String) -> SessionIndexInfo {
         // Find matching session entry
         for entry in index.entries {
             if entry.sessionId == sessionId {
                 // Prefer customTitle (set via /rename) over summary (auto-generated)
+                let name: String
                 if let customTitle = entry.customTitle, !customTitle.isEmpty {
-                    return customTitle
+                    name = customTitle
+                } else {
+                    name = entry.summary ?? ""
                 }
-                return entry.summary ?? ""
+                
+                let firstPrompt = entry.firstPrompt ?? ""
+                return SessionIndexInfo(name: name, firstPrompt: firstPrompt)
             }
         }
         
         // Session not found in index
-        return ""
+        return SessionIndexInfo(name: "", firstPrompt: "")
     }
     
     private func convertToSession(_ data: StatuslineData) -> ClaudeSession {
@@ -213,14 +225,15 @@ class SessionManager: ObservableObject {
         let projectName = (projectDir as NSString).lastPathComponent.isEmpty ? 
             projectDir : (projectDir as NSString).lastPathComponent
         
-        // Get session name from sessions-index.json
-        let sessionName = getSessionName(transcriptPath: data.transcriptPath, sessionId: data.sessionId)
+        // Get session info from sessions-index.json
+        let sessionInfo = getSessionInfo(transcriptPath: data.transcriptPath, sessionId: data.sessionId)
 
         return ClaudeSession(
             id: data.sessionId,
             cwd: data.cwd,
             sessionId: data.sessionId,
-            sessionName: sessionName,
+            sessionName: sessionInfo.name,
+            firstPrompt: sessionInfo.firstPrompt,
             projectDir: projectDir,
             projectName: projectName,
             model: ModelInfo(
