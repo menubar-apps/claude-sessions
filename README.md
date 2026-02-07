@@ -23,88 +23,89 @@ A native macOS menubar application that provides always-visible monitoring of Cl
 - Statusline configured (see setup below)
 - Xcode 15+ (for building from source)
 
-## Installation
+## Quick Start
 
-### Option 1: Download Pre-built App (Coming Soon)
+> **Tip**: Just ask Claude Code to install this for you! Share this repo URL with Claude and say: "Install claude-anywhere from https://github.com/streetturtle/claude-anywhere"
 
-Download the latest release from the [Releases](https://github.com/yourusername/claude-session-monitor-macos/releases) page.
+### Installation
 
-### Option 2: Build from Source
+```bash
+brew install streetturtle/tap/claude-anywhere
+```
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/claude-session-monitor-macos.git
-   cd claude-session-monitor-macos
-   ```
+## Prerequisites
 
-2. Open the project in Xcode:
-   ```bash
-   open claude-sessions.xcodeproj
-   ```
+Before using `claude-anywhere`, you need to set up a statusline script that captures session data.
 
-3. Build and run (⌘R) or create an archive for distribution
+### 1. Install `jq` if you don't have it
 
-## Prerequisites: Statusline Setup
+```bash
+brew install jq
+```
 
-This app reads session data from `/tmp/claude-status-*.json` files created by the statusline script. You need to configure Claude Code to use the statusline.
+### 2. Create the session writer script
 
-### 1. Create the Statusline Script
-
-Create a file at `~/.claude/statusline.sh`:
+Create `~/.claude/write-status.sh` with the following content:
 
 ```bash
 #!/bin/bash
-# This script is called by Claude Code to generate statusline data
 
-# Read the JSON data from stdin
-json_data=$(cat)
+# Read the JSON input from stdin
+input=$(cat)
 
-# Extract session info
-session_id=$(echo "$json_data" | jq -r '.session_id // "unknown"')
-cwd=$(echo "$json_data" | jq -r '.cwd // "unknown"')
+# Extract session ID
+session_id=$(echo "$input" | jq -r '.session_id // "unknown"')
 
-# Add timestamp
-timestamp=$(date +%s)000
-json_with_timestamp=$(echo "$json_data" | jq ". + {\"_statusline_update_time\": $timestamp}")
+# Create sessions directory if it doesn't exist
+sessions_dir="$HOME/.claude_sessions"
+mkdir -p "$sessions_dir"
 
-# Write to temp file for the menubar app to read
-# Sanitize the cwd for filename
-safe_cwd=$(echo "$cwd" | tr '/' '-')
-temp_file="/tmp/claude-status-${safe_cwd}.json"
-echo "$json_with_timestamp" > "$temp_file"
+# Use session_id as the filename to support multiple sessions from the same folder
+status_file="$sessions_dir/claude-status-${session_id}.json"
 
-# Output empty string (no statusline display in terminal)
-echo ""
+# Write the status data to file with timestamp
+# Use milliseconds - on macOS, date doesn't support %N, so we append 000 to convert seconds to ms
+echo "$input" | jq ". + {\"_statusline_update_time\": $(date +%s)000}" > "$status_file"
+
+# Pass the input to stdout for the next script in the pipe
+echo "$input"
 ```
 
 Make it executable:
+
 ```bash
-chmod +x ~/.claude/statusline.sh
+chmod +x ~/.claude/write-status.sh
 ```
 
-### 2. Configure Claude Code
+### 3. Configure Claude Code statusline
 
-Add to your `~/.claude/settings.json`:
+Edit `~/.claude/settings.json` and add or update the `statusLine` configuration:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh",
+    "command": "~/.claude/write-status.sh | ~/.claude/your-existing-statusline-script.sh",
     "padding": 0
   }
 }
 ```
 
-### 3. Verify Setup
+If you don't have an existing statusline script, you can use just the writer:
 
-Start a Claude Code session and check that status files are being created:
-
-```bash
-ls -la /tmp/claude-status-*.json
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/write-status.sh",
+    "padding": 0
+  }
+}
 ```
 
-You should see JSON files being created/updated as you use Claude.
+### 4. Restart Claude Code
+
+Restart Claude Code to apply the changes. Session data will now be written to `~/.claude_sessions/`.
 
 ## Usage
 
