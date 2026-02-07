@@ -2,7 +2,7 @@
 
 A native macOS menubar application that provides always-visible monitoring of Claude Code sessions. The app displays session status through visual indicators in the menubar and provides detailed analytics in a dropdown panel.
 
-![Claude Session Monitor](https://via.placeholder.com/800x400?text=Claude+Session+Monitor+Screenshot)
+<img width="1031" height="672" alt="Screenshot 2026-02-07 at 12 24 07 PM" src="https://github.com/user-attachments/assets/97b32154-cd55-42ff-8612-ce94aceae120" />
 
 ## Features
 
