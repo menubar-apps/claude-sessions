@@ -18,24 +18,17 @@ A native macOS menubar application that provides always-visible monitoring of Cl
 
 ## Requirements
 
-- macOS 13.0 (Ventura) or later
+- macOS 15.0 (Sequoia) or later
 - Claude Code installed
 - Statusline configured (see setup below)
-- Xcode 15+ (for building from source)
 
 ## Quick Start
 
 > **Tip**: Just ask Claude Code to install this for you! Share this repo URL with Claude and say: "Install claude-anywhere from https://github.com/streetturtle/claude-anywhere"
 
-### Installation
-
-```bash
-brew install streetturtle/tap/claude-anywhere
-```
-
 ## Prerequisites
 
-Before using `claude-anywhere`, you need to set up a statusline script that captures session data.
+Set up a statusline script that captures session data.
 
 ### 1. Install `jq` if you don't have it
 
