@@ -32,7 +32,7 @@ struct AboutView: View {
                 .padding(.vertical, 4)
 
             Button(action: {
-                if let url = URL(string: "https://github.com/yourusername/claude-sessions") {
+                if let url = URL(string: "https://menubar-apps.github.io/#claude-sessions") {
                     openURL(url)
                 }
             }) {
@@ -50,7 +50,7 @@ struct AboutView: View {
             )
 
             Button(action: {
-                if let url = URL(string: "https://github.com/yourusername/claude-sessions/issues/new?template=feature_request.md") {
+                if let url = URL(string: "https://github.com/streetturtle/claude-sessions/issues/new?template=feature_request.md") {
                     openURL(url)
                 }
             }) {
@@ -68,7 +68,7 @@ struct AboutView: View {
             )
 
             Button(action: {
-                if let url = URL(string: "https://github.com/yourusername/claude-sessions/issues/new?template=bug_report.md") {
+                if let url = URL(string: "https://github.com/streetturtle/claude-sessions/issues/new?template=bug_report.md") {
                     openURL(url)
                 }
             }) {
