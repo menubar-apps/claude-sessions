@@ -1,20 +1,8 @@
 # Claude Session Monitor - macOS Menubar App
 
-A native macOS menubar application that provides always-visible monitoring of Claude Code sessions. The app displays session status through visual indicators in the menubar and provides detailed analytics in a dropdown panel.
+A native macOS menubar application that provides easy monitoring of Claude Code sessions. The app displays session status, like model used, number of in/out tokens, cost, etc.
 
 <img width="1031" height="672" alt="Screenshot 2026-02-07 at 12 24 07 PM" src="https://github.com/user-attachments/assets/97b32154-cd55-42ff-8612-ce94aceae120" />
-
-## Features
-
-- **Always Visible**: Monitor Claude sessions without invoking external tools
-- **Lightweight**: Minimal resource usage, native Swift/SwiftUI
-- **At-a-Glance Status**: Instantly see if Claude is working across all sessions
-- **Quick Access**: Click for detailed session analytics
-- **Non-Intrusive**: Clean, minimal menubar presence
-- **Multiple Display Styles**: Choose between multiple circles, single icon with badge, or compact with overflow
-- **Session Actions**: Copy path, open in Terminal/Finder, remove from view
-- **Cost Tracking**: Real-time cost monitoring across all sessions
-- **Context Usage**: Visual progress bars showing context window usage
 
 ## Requirements
 
