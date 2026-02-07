@@ -258,7 +258,16 @@ class SessionManager: ObservableObject {
                 linesAdded: data.cost.totalLinesAdded,
                 linesRemoved: data.cost.totalLinesRemoved
             ),
-            lastUpdateTime: Date(timeIntervalSince1970: TimeInterval(data.statuslineUpdateTime) / 1000.0)
+            lastUpdateTime: {
+                // Use statuslineUpdateTime if available, otherwise fall back to timestamp
+                if let updateTime = data.statuslineUpdateTime {
+                    return Date(timeIntervalSince1970: TimeInterval(updateTime) / 1000.0)
+                } else if let timestampStr = data.timestamp, let timestamp = Int64(timestampStr) {
+                    return Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
+                } else {
+                    return Date() // Use current time as last resort
+                }
+            }()
         )
     }
 

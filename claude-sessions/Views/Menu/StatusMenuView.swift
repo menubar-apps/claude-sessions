@@ -10,6 +10,7 @@ import AppKit
 
 struct StatusMenuView: View {
     @EnvironmentObject var sessionManager: SessionManager
+    @Environment(\.openWindow) var openWindow
     @State private var searchText = ""
 
     private var filteredSessions: [ClaudeSession] {
@@ -31,17 +32,6 @@ struct StatusMenuView: View {
                     .font(.headline)
                 Spacer()
 
-                SettingsLink {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 14))
-                }
-                .buttonStyle(.plain)
-                .frame(minWidth: 32, minHeight: 32)
-                .contentShape(Rectangle())
-                .keyboardShortcut(",", modifiers: [.command])
-                .accessibilityLabel("Open preferences")
-                .help("Preferences")
-
                 Button(action: {
                     sessionManager.refreshSessions()
                 }) {
@@ -54,6 +44,36 @@ struct StatusMenuView: View {
                 .keyboardShortcut("r", modifiers: [.command])
                 .accessibilityLabel("Refresh sessions")
                 .help("Refresh session data")
+
+                Menu {
+                    Button(action: {
+                        openWindow(id: "about")
+                    }) {
+                        Label("About Claude Sessions", systemImage: "info.circle")
+                    }
+
+                    SettingsLink {
+                        Label("Settings...", systemImage: "gearshape")
+                    }
+                    .keyboardShortcut(",", modifiers: [.command])
+
+                    Divider()
+
+                    Button(action: {
+                        NSApplication.shared.terminate(nil)
+                    }) {
+                        Label("Quit Claude Sessions", systemImage: "power")
+                    }
+                    .keyboardShortcut("q", modifiers: [.command])
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 14))
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 32, minHeight: 32)
+                .contentShape(Rectangle())
+                .accessibilityLabel("More options")
+                .help("Settings and more")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -130,26 +150,6 @@ struct StatusMenuView: View {
             SummaryView(sessions: filteredSessions)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-            
-            Divider()
-            
-            Button(action: {
-                NSApplication.shared.terminate(nil)
-            }) {
-                HStack {
-                    Text("Quit Claude Sessions")
-                    Spacer()
-                    Text("⌘Q")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-            .keyboardShortcut("q", modifiers: [.command])
-            .accessibilityLabel("Quit application")
         }
         .frame(width: 400)
     }

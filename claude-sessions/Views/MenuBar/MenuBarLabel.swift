@@ -9,20 +9,10 @@ import SwiftUI
 
 struct MenuBarLabel: View {
     let sessions: [ClaudeSession]
-    let displayStyle: PreferencesManager.DisplayStyle
 
     var body: some View {
-        Group {
-            switch displayStyle {
-            case .multipleCircles:
-                MultipleCirclesView(sessions: sessions)
-            case .singleIconWithBadge:
-                SingleIconWithBadgeView(sessions: sessions)
-            case .compactWithOverflow:
-                CompactWithOverflowView(sessions: sessions)
-            }
-        }
-        .padding(.horizontal, 4)
-        .frame(minWidth: 20, minHeight: 18)
+        SingleIconWithBadgeView(sessions: sessions)
+            .padding(.horizontal, 2)
+            .frame(maxHeight: 16)
     }
 }

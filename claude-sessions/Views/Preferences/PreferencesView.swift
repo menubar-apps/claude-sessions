@@ -13,15 +13,6 @@ struct PreferencesView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Menubar Style:", selection: $preferencesManager.displayStyle) {
-                    ForEach(PreferencesManager.DisplayStyle.allCases) { style in
-                        Text(style.rawValue).tag(style)
-                    }
-                }
-                .pickerStyle(.radioGroup)
-                .accessibilityLabel("Menubar display style")
-                .help("Choose how sessions appear in the menubar")
-
                 Toggle("Show closed sessions in menu", isOn: $preferencesManager.showClosedSessions)
                     .help("Display sessions that have been inactive for over an hour")
             } header: {

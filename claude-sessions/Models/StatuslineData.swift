@@ -15,7 +15,8 @@ struct StatuslineData: Codable {
     let workspace: WorkspaceData?
     let contextWindow: ContextWindowData
     let cost: CostData
-    let statuslineUpdateTime: Int64
+    let statuslineUpdateTime: Int64?
+    let timestamp: String?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -26,6 +27,7 @@ struct StatuslineData: Codable {
         case contextWindow = "context_window"
         case cost
         case statuslineUpdateTime = "_statusline_update_time"
+        case timestamp
     }
 
     struct ModelData: Codable {

@@ -18,7 +18,7 @@ struct claude_sessionsApp: App {
                 .environmentObject(sessionManager)
                 .environmentObject(preferencesManager)
         } label: {
-            MenuBarLabel(sessions: sessionManager.sessions, displayStyle: preferencesManager.displayStyle)
+            MenuBarLabel(sessions: sessionManager.sessions)
         }
         .menuBarExtraStyle(.window)
 
@@ -26,5 +26,11 @@ struct claude_sessionsApp: App {
             PreferencesView()
                 .environmentObject(preferencesManager)
         }
+
+        Window("About Claude Sessions", id: "about") {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }

@@ -13,20 +13,6 @@ class PreferencesManager: ObservableObject {
 
     private let defaults = UserDefaults.standard
 
-    enum DisplayStyle: String, CaseIterable, Identifiable {
-        case multipleCircles = "Multiple Circles"
-        case singleIconWithBadge = "Single Icon with Badge"
-        case compactWithOverflow = "Compact with Overflow"
-
-        var id: String { rawValue }
-    }
-
-    @Published var displayStyle: DisplayStyle {
-        didSet {
-            defaults.set(displayStyle.rawValue, forKey: "displayStyle")
-        }
-    }
-
     @Published var launchAtLogin: Bool {
         didSet {
             defaults.set(launchAtLogin, forKey: "launchAtLogin")
@@ -59,7 +45,6 @@ class PreferencesManager: ObservableObject {
     }
 
     private init() {
-        self.displayStyle = DisplayStyle(rawValue: defaults.string(forKey: "displayStyle") ?? "") ?? .multipleCircles
         self.launchAtLogin = defaults.bool(forKey: "launchAtLogin")
         self.showClosedSessions = defaults.bool(forKey: "showClosedSessions")
         self.refreshInterval = defaults.double(forKey: "refreshInterval") != 0 ? defaults.double(forKey: "refreshInterval") : 2.0

@@ -23,18 +23,16 @@ struct SingleIconWithBadgeView: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
-            if sessions.isEmpty {
-                Image(systemName: "circle.dotted")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
-            } else {
-                Image(systemName: "circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(statusColor)
+        HStack(spacing: 3) {
+            Image(systemName: "terminal.fill")
+                .font(.system(size: 14))
+                .foregroundColor(.primary)
+                .opacity(sessions.isEmpty ? 0.5 : 1.0)
 
+            if !sessions.isEmpty {
                 Text("\(sessions.count)")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(statusColor)
             }
         }
         .accessibilityElement(children: .combine)
