@@ -49,11 +49,11 @@ struct StatusMenuView: View {
                     Button(action: {
                         openWindow(id: "about")
                     }) {
-                        Label("About Claude Sessions", systemImage: "info.circle")
+                        Label("About", systemImage: "info.circle")
                     }
 
                     SettingsLink {
-                        Label("Settings...", systemImage: "gearshape")
+                        Label("Settings", systemImage: "gearshape")
                     }
                     .keyboardShortcut(",", modifiers: [.command])
 
@@ -62,11 +62,11 @@ struct StatusMenuView: View {
                     Button(action: {
                         NSApplication.shared.terminate(nil)
                     }) {
-                        Label("Quit Claude Sessions", systemImage: "power")
+                        Label("Quit", systemImage: "power")
                     }
                     .keyboardShortcut("q", modifiers: [.command])
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "line.horizontal.3")
                         .font(.system(size: 14))
                 }
                 .buttonStyle(.plain)
@@ -142,7 +142,7 @@ struct StatusMenuView: View {
                     }
                     .padding()
                 }
-                .frame(maxHeight: 600)
+                .frame(height: 500)
             }
 
             Divider()

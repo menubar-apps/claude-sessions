@@ -23,10 +23,6 @@ struct AboutView: View {
                 .font(.title)
                 .fontWeight(.semibold)
 
-            Text("by Casey Jones")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
             Text("version \(currentVersion)")
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
